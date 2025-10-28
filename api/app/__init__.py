@@ -10,9 +10,6 @@ def create_flask_app():
     api_conf = config["API"]
 
     route(app)
-    db_connect()
 
     app.run(host=str(api_conf.get("HOST")), port=int(api_conf.get("PORT")), debug=bool(api_conf.get("DEBUG")))
-
-def db_connect():
-    print(dict(config["DB"]))
+    

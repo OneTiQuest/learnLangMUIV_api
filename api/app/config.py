@@ -9,6 +9,7 @@ def init_config():
     config.set('DB', 'NAME', os.environ.get("POSTGRES_DB"))
     config.set('DB', 'USER', os.environ.get("POSTGRES_USER"))
     config.set('DB', 'PASSWORD', os.environ.get("POSTGRES_PASSWORD"))
+    config.set('DB', 'HOST', os.environ.get("POSTGRES_HOST"))
     config.set('DB', 'DEBUG', debug)
 
     config.add_section('API')

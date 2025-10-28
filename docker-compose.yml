@@ -4,6 +4,7 @@ services:
   # Сервис БД
   db:
     image: postgres:13.3
+    restart: "always"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -17,11 +18,13 @@ services:
     ports:
       - "6432:5432" # Проброс портов
     networks:
-      - db
+      db:
+        ipv4_address: 172.28.6.4
 
   # Сервис API
   api:
     build: ./api
+    restart: "always"
     env_file:
       - .env
     ports:
@@ -43,6 +46,10 @@ networks:
   db:
     name: bd
     driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.6.0/24
 
   virtnet:
     driver: bridge
