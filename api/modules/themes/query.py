@@ -10,9 +10,10 @@ def update_theme(theme_id: int, name: str):
                 name = %s
             WHERE 
                 id = %s
-        """, 
-        (name, theme_id)
+        """,
+        (name, theme_id),
     )
+
 
 def delete_theme(theme_id: int):
     sql(
@@ -22,5 +23,5 @@ def delete_theme(theme_id: int):
             WHERE 
                 id = %s
         """,
-        (theme_id)
+        (theme_id),
     )

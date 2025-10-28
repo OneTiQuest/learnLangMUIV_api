@@ -1,9 +1,30 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
+from modules.exercises import query
 
-_bp = Blueprint('', __name__)
+exercises_bp = Blueprint("exercises", __name__, url_prefix="/exercises")
 
-@_bp.get('/')
-def hello_world():
-    return jsonify({
-        "success": True
-    })
+
+@exercises_bp.get("/")
+def get_exercises():
+    res = query.get_exercises()
+    return jsonify(res)
+
+
+@exercises_bp.get("/<int:exercise_id>")
+def get_exercises(exercise_id: int):
+    res = query.get_exersise(exercise_id)
+    return jsonify(res)
+
+
+@exercises_bp.patch("/<int:exercise_id>")
+def get_exercises(exercise_id: int):
+    title = request.json.title
+    data = request.json.data
+    res = query.update_exersise(exercise_id, title, data)
+    return jsonify(res)
+
+
+@exercises_bp.get("/exercises/types")
+def get_exercises_types():
+    res = query.get_exercises_types()
+    return jsonify(res)

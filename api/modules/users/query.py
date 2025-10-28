@@ -1,6 +1,7 @@
 from app.database import sql, sql_one
 import json
 
+
 def get_users():
     return sql(
         f"""
@@ -20,6 +21,7 @@ def get_users():
         """
     )
 
+
 def get_user(id: int):
     return sql(
         f"""
@@ -33,9 +35,10 @@ def get_user(id: int):
                 users 
             WHERE 
                 id = %s
-        """, 
-        (id,)
+        """,
+        (id,),
     )
+
 
 def save_user(user_info: dict):
     sql_one(
@@ -54,13 +57,14 @@ def save_user(user_info: dict):
             RETURNING *
         """,
         (
-            user_info.first_name, 
-            user_info.last_name, 
-            user_info.login, 
+            user_info.first_name,
+            user_info.last_name,
+            user_info.login,
             user_info.chat_id,
-            user_info.role_id or 1
-        )
+            user_info.role_id or 1,
+        ),
     )
+
 
 def create_user_lang(user_id: int, lang_id: int):
     sql_one(
@@ -76,8 +80,9 @@ def create_user_lang(user_id: int, lang_id: int):
             ON CONFLICT (user_id, lang_id)
             DO NOTHING
         """,
-        (user_id, lang_id)
+        (user_id, lang_id),
     )
+
 
 def set_user_grade(user_id: int, theme_id: int, grade: int):
     sql(
@@ -87,12 +92,14 @@ def set_user_grade(user_id: int, theme_id: int, grade: int):
                 (user_id, theme_id, grade) 
             VALUES 
                 (%s, %s, %s)
+            RETURNING *
             ON CONFLICT 
                 (user_id, theme_id)
             DO NOTHING
         """,
-        (user_id, theme_id, grade)
+        (user_id, theme_id, grade),
     )
+
 
 def update_user(user_id: int, role_id: int):
     sql(
@@ -104,8 +111,9 @@ def update_user(user_id: int, role_id: int):
             WHERE 
                 id = %s
         """,
-        (role_id, user_id)
+        (role_id, user_id),
     )
+
 
 def get_modules(user_id: int):
     return sql(
@@ -154,8 +162,9 @@ def get_modules(user_id: int):
             	m_ids.cui = %s
             ORDER BY id ASC
         """,
-        (user_id, user_id)
+        (user_id, user_id),
     )
+
 
 def get_user_langs(user_id: int):
     return sql(
@@ -173,9 +182,10 @@ def get_user_langs(user_id: int):
             WHERE
                 ul.user_id = %s
         """,
-        (user_id,)
+        (user_id,),
     )
 
+# TODO Привязывать к конкретному курсу
 def create_module(user_id: int, module_id: int):
     sql(
         f"""
@@ -196,9 +206,10 @@ def create_module(user_id: int, module_id: int):
             )
             ON CONFLICT (course_id, module_id)
             DO NOTHING
-        """, 
-        (module_id, user_id)
+        """,
+        (module_id, user_id),
     )
+
 
 def get_grades(user_id: int):
     sql(
@@ -228,12 +239,13 @@ def get_grades(user_id: int):
             ON gr.module_id = m.id
             GROUP BY m.id 
         """,
-        (user_id)
+        (user_id),
     )
+
 
 def get_teacher_stat(teacher_id: int):
     return sql(
-         f"""
+        f"""
             WITH cl AS (
             	SELECT
             		lang_id,
@@ -289,27 +301,69 @@ def get_teacher_stat(teacher_id: int):
             )
             SELECT * FROM modules_t 
         """,
-        (teacher_id)
+        (teacher_id),
     )
+
+
+def get_answers(user_id: int, theme_id: int):
+    return sql(
+        f"""
+            SELECT
+            	a.answer,
+            	e.another_data::json->>'success_answer'
+            FROM 
+            	answers a
+            JOIN
+            	exercise e 
+            ON 
+            	a.exercise_id = e.id
+            JOIN
+            	themes t 
+            ON
+            	t.id = e.theme_id 
+            WHERE
+            	e.type_id IN (1, 2, 4)
+                AND a.user_id = %s
+            	AND t.id = %s
+        """,
+        (user_id, theme_id),
+    )
+
+
+def create_answer(exersice_id: int, user_id: int, answer: str):
+    return sql_one(
+        f"""
+            INSERT INTO 
+                answers 
+                (exercise_id, user_id, answer) 
+            VALUES 
+                (%s, %s, %s);
+            ON CONFLICT 
+                (exercise_id, user_id)
+            DO UPDATE
+                SET answer = %s
+            RETURNING *
+        """,
+        (exersice_id, user_id, answer, answer),
+    )
+
 
 def upsert_settings(user_id: int, setting_name=None, value=None):
     res = sql_one(f"SELECT settings FROM settings WHERE user_id=%s", (user_id))
     settings = res and json.loads(res[0])
 
     if not settings:
-        settings = {
-            "course_id": None
-        }
+        settings = {"course_id": None}
         sql(
             f"INSERT INTO settings (settings, user_id) VALUES (%s, %s)",
-            (json.dumps(settings), user_id)
+            (json.dumps(settings), user_id),
         )
 
     if setting_name and value:
         settings[setting_name] = value
         sql(
             f"UPDATE settings SET settings = %s, user_id = %s WHERE user_id=%s",
-            (json.dumps(settings), user_id, user_id)
+            (json.dumps(settings), user_id, user_id),
         )
 
     return settings
