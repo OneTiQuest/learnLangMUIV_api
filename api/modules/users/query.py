@@ -26,17 +26,29 @@ def get_user(id: int):
     return sql(
         f"""
             SELECT 
-                name, 
-                last_name, 
-                login, 
-                chat_id, 
-                role_id 
+                *
             FROM 
                 users 
             WHERE 
                 id = %s
+            LIMIT 1
         """,
         (id,),
+    )
+
+def get_auth_user(login: str, password: str):
+    return sql_one(
+        f"""
+            SELECT 
+                *
+            FROM 
+                users 
+            WHERE 
+                login = %s
+                AND password = %s
+            LIMIT 1
+        """,
+        (login, password),
     )
 
 
@@ -48,7 +60,8 @@ def save_user(user_info: dict):
                 (
                     name, 
                     last_name, 
-                    login, 
+                    login,
+                    password,
                     chat_id, 
                     role_id
                 ) 
@@ -60,6 +73,7 @@ def save_user(user_info: dict):
             user_info.first_name,
             user_info.last_name,
             user_info.login,
+            user_info.password,
             user_info.chat_id,
             user_info.role_id or 1,
         ),

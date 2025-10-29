@@ -218,7 +218,7 @@ INSERT INTO public.roles (id,"name") VALUES
 	 (3,'Администратор');
 
 INSERT INTO public.users ("name",last_name,login,password,chat_id,role_id) VALUES
-	 ('Администратор',NULL,'admin','21232f297a57a5a743894a0e4a801fc3', NULL,3);
+	 ('Администратор',NULL,'admin','admin', NULL,3);
 	
 -- INSERT INTO public.settings (settings,user_id) VALUES ();
 

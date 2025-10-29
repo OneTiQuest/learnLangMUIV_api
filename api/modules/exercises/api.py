@@ -28,3 +28,7 @@ def get_exercises(exercise_id: int):
 def get_exercises_types():
     res = query.get_exercises_types()
     return jsonify(res)
+
+@exercises_bp.post("/exercises/media")
+def save_media():
+    return jsonify(request.json)

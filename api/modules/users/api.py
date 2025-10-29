@@ -1,14 +1,16 @@
 from flask import Blueprint, jsonify, request
 from modules.users import query
+from flask_jwt_extended import get_jwt_identity, jwt_required, get_jwt
 
 users_bp = Blueprint("users", __name__, url_prefix="/users")
 
 
 # /users/
 @users_bp.get("/")
+@jwt_required()
 def get_users():
     res = query.get_users()
-    return jsonify(res)
+    return jsonify(res, role)
 
 
 # /users/
@@ -66,9 +68,11 @@ def get_user_lang(user_id: int):
 @users_bp.get("/<int:user_id>/grades")
 def get_grades(user_id: int):
     res = query.get_grades(user_id)
-
-    # TODO: Решается авторизацией
-    if request.json.is_teacher:
+    role = get_jwt()["user_role"]
+    
+    is_teacher = role == 2
+    
+    if is_teacher:
         res = query.get_teacher_stat(user_id)
 
     return jsonify(res)
