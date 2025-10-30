@@ -23,18 +23,29 @@ def get_users():
 
 
 def get_user(id: int):
-    return sql(
+    return sql_one(
         f"""
             SELECT 
-                *
+                u.chat_id,
+            	u.name,
+            	u.last_name,
+            	login,
+                r.id AS role_id,
+            	r.name AS role,
+            	u.created_at
             FROM 
-                users 
+                users u
+            JOIN
+            	roles r 
+            ON
+            	r.id = u.role_id
             WHERE 
-                id = %s
+                u.id = %s
             LIMIT 1
         """,
         (id,),
     )
+
 
 def get_auth_user(login: str, password: str):
     return sql_one(
@@ -52,8 +63,23 @@ def get_auth_user(login: str, password: str):
     )
 
 
+def has_login(login: str):
+    return sql_one(
+        f"""
+            SELECT 
+                True
+            FROM 
+                users 
+            WHERE 
+                login = %s
+            LIMIT 1
+        """,
+        (login,),
+    )
+
+
 def save_user(user_info: dict):
-    sql_one(
+    return sql_one(
         f"""
             INSERT INTO 
                 users 
@@ -66,17 +92,17 @@ def save_user(user_info: dict):
                     role_id
                 ) 
             VALUES 
-                (%s, %s, %s, %s, %s) 
+                (
+                    %(first_name)s, 
+                    %(last_name)s, 
+                    %(login)s, 
+                    %(password)s, 
+                    %(chat_id)s, 
+                    %(role_id)s
+                ) 
             RETURNING *
         """,
-        (
-            user_info.first_name,
-            user_info.last_name,
-            user_info.login,
-            user_info.password,
-            user_info.chat_id,
-            user_info.role_id or 1,
-        ),
+        user_info,
     )
 
 
@@ -198,6 +224,7 @@ def get_user_langs(user_id: int):
         """,
         (user_id,),
     )
+
 
 # TODO Привязывать к конкретному курсу
 def create_module(user_id: int, module_id: int):

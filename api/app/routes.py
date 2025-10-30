@@ -9,14 +9,15 @@ from modules.modules.api import modules_bp
 from modules.langs.api import langs_bp
 from modules.themes.api import themes_bp
 
+
 def route(app: Flask):
     jwt = JWTManager(app)
+
     @jwt.token_in_blocklist_loader
     def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
         jti = jwt_payload["jti"]
         return jti in black_list_jwt
-    
-    
+
     app.register_blueprint(users_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(courses_bp)
@@ -24,16 +25,17 @@ def route(app: Flask):
     app.register_blueprint(langs_bp)
     app.register_blueprint(themes_bp)
 
-    @app.errorhandler(RuntimeError)
+    @app.errorhandler(Exception)
     def error(error):
-        if isinstance(error, RuntimeError):
-            return jsonify({
-                "error": True,
-                "description": error.args
-            })
-        else:
-            return jsonify({
-                "error": error.code,
-                "description": error.description
-            })
-    
+        err_msg = {"error": True}
+
+        if hasattr(error, "code"):
+            err_msg["code"] = error.code
+
+        if hasattr(error, "description"):
+            err_msg["description"] = error.description
+
+        if hasattr(error, "args"):
+            err_msg["args"] = error.args
+
+        return jsonify(err_msg)

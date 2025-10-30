@@ -7,10 +7,9 @@ users_bp = Blueprint("users", __name__, url_prefix="/users")
 
 # /users/
 @users_bp.get("/")
-@jwt_required()
 def get_users():
     res = query.get_users()
-    return jsonify(res, role)
+    return jsonify(res)
 
 
 # /users/
@@ -25,6 +24,14 @@ def save_users():
 def get_user(user_id: int):
     res = query.get_user(user_id)
     return jsonify(res)
+
+
+# /users/profile
+@users_bp.get("/profile")
+@jwt_required()
+def get_profile():
+    identity = get_jwt_identity()
+    return get_user(identity[0])
 
 
 # /users/1
@@ -69,9 +76,9 @@ def get_user_lang(user_id: int):
 def get_grades(user_id: int):
     res = query.get_grades(user_id)
     role = get_jwt()["user_role"]
-    
+
     is_teacher = role == 2
-    
+
     if is_teacher:
         res = query.get_teacher_stat(user_id)
 
