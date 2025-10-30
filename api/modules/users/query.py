@@ -106,6 +106,21 @@ def save_user(user_info: dict):
     )
 
 
+def set_role(user_id: int, role_id: int):
+    return sql(
+        f"""
+            UPDATE
+                users 
+            SET 
+                role_id = %s
+            WHERE
+                id = %s
+            RETURNING *
+        """,
+        (role_id, user_id),
+    )
+
+
 def create_user_lang(user_id: int, lang_id: int):
     sql_one(
         f"""
@@ -117,7 +132,8 @@ def create_user_lang(user_id: int, lang_id: int):
                 ) 
             VALUES 
                 (%s, %s)
-            ON CONFLICT (user_id, lang_id)
+            ON CONFLICT 
+                (user_id, lang_id)
             DO NOTHING
         """,
         (user_id, lang_id),
@@ -386,6 +402,40 @@ def create_answer(exersice_id: int, user_id: int, answer: str):
             RETURNING *
         """,
         (exersice_id, user_id, answer, answer),
+    )
+
+
+def get_user_courses(user_id: int):
+    return sql(
+        f"""
+            SELECT
+                *
+            FROM
+                courses_users cu
+            JOIN
+                courses c
+            ON
+                cu.course_id = c.id
+            WHERE
+                cu.user_id = %s
+        """,
+        (user_id),
+    )
+
+
+def set_user_course(user_id: int, course_id: int):
+    return sql(
+        f"""
+            INSERT INTO
+                courses_users
+                (user_id, course_id)
+            VALUES
+                (%s, %s)
+            ON CONFLICT 
+                (user_id, course_id)
+            DO NOTHING
+        """,
+        (user_id, course_id),
     )
 
 
