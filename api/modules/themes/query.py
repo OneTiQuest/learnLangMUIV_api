@@ -2,7 +2,7 @@ from app.database import sql, sql_one
 
 
 def update_theme(theme_id: int, name: str):
-    sql(
+    return sql_one(
         f"""
             UPDATE 
                 themes
@@ -10,20 +10,22 @@ def update_theme(theme_id: int, name: str):
                 name = %s
             WHERE 
                 id = %s
+            RETURNING *
         """,
         (name, theme_id),
     )
 
 
 def delete_theme(theme_id: int):
-    sql(
+    return sql(
         f"""
             DELETE FROM 
                 themes 
             WHERE 
                 id = %s
+            RETURNING *
         """,
-        (theme_id),
+        (theme_id,),
     )
 
 
@@ -51,7 +53,7 @@ def get_next_exercise(theme_id: int, prev_ex_id: int = None):
         f"JOIN prev_ex_limit pel ON te.row_n = pel.row_n + 1" if prev_ex_id else ""
     )
 
-    return sql(
+    return sql_one(
         f"""
             WITH theme_ex AS (
                 SELECT

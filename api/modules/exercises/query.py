@@ -28,14 +28,17 @@ def get_exersise(id: int):
 
 
 def update_exersise(id: int, title: str = None, data: dict = None):
-    change_title_query = f"title = '{title}'," if title else ""
+    change_title_query = f"title = '{title}'" if title else ""
 
     change_data_query = ""
     if data:
         key, value = data.popitem()
         change_data_query = f"another_data = jsonb_set(COALESCE(another_data, '{{}}')::jsonb, '{{{key}}}', '{json.dumps(value)}'::jsonb)"
 
-    sql(
+    if change_title_query and change_data_query:
+        change_title_query += ','
+        
+    return sql_one(
         f"""
             UPDATE 
                 exercise
@@ -43,6 +46,7 @@ def update_exersise(id: int, title: str = None, data: dict = None):
                 {change_title_query}
                 {change_data_query}
             WHERE id = %s
+            RETURNING *
         """,
         (id,),
     )

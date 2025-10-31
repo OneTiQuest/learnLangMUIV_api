@@ -6,12 +6,8 @@ def get_users():
     return sql(
         f"""
             SELECT
-            	u.chat_id,
-            	u.name,
-            	last_name,
-            	login,
-            	r.name AS role,
-            	created_at
+                u.*,
+            	r.name AS role_name
             FROM 
             	users u
             JOIN
@@ -26,14 +22,9 @@ def get_user(id: int):
     return sql_one(
         f"""
             SELECT 
-                u.chat_id,
-            	u.name,
-            	u.last_name,
-            	login,
-                r.id AS role_id,
-            	r.name AS role,
-            	u.created_at
-            FROM 
+                u.*,
+            	r.name AS role_name
+            FROM
                 users u
             JOIN
             	roles r 
@@ -50,10 +41,10 @@ def get_user(id: int):
 def get_auth_user(login: str, password: str):
     return sql_one(
         f"""
-            SELECT 
-                *
+            SELECT
+                u.*
             FROM 
-                users 
+                users u
             WHERE 
                 login = %s
                 AND password = %s
@@ -82,7 +73,7 @@ def save_user(user_info: dict):
     return sql_one(
         f"""
             INSERT INTO 
-                users 
+                users
                 (
                     name, 
                     last_name, 
@@ -121,8 +112,23 @@ def set_role(user_id: int, role_id: int):
     )
 
 
+def set_chat(user_id: int, chat_id: int):
+    return sql(
+        f"""
+            UPDATE
+                users 
+            SET 
+                chat_id = %s
+            WHERE
+                id = %s
+            RETURNING *
+        """,
+        (chat_id, user_id),
+    )
+
+
 def create_user_lang(user_id: int, lang_id: int):
-    sql_one(
+    return sql_one(
         f"""
             INSERT INTO 
                 users_langs 
@@ -135,30 +141,52 @@ def create_user_lang(user_id: int, lang_id: int):
             ON CONFLICT 
                 (user_id, lang_id)
             DO NOTHING
+            RETURNING *
         """,
         (user_id, lang_id),
     )
 
 
+def put_user_lang(user_id: int, lang_id: int):
+    return sql_one(
+        f"""
+            DELETE FROM users_langs WHERE user_id = %s;
+            INSERT INTO 
+                users_langs 
+                (
+                    user_id, 
+                    lang_id
+                ) 
+            VALUES 
+                (%s, %s)
+            ON CONFLICT 
+                (user_id, lang_id)
+            DO NOTHING
+            RETURNING *
+        """,
+        (user_id, user_id, lang_id),
+    )
+
+
 def set_user_grade(user_id: int, theme_id: int, grade: int):
-    sql(
+    return sql(
         f"""
             INSERT INTO 
                 grades 
                 (user_id, theme_id, grade) 
             VALUES 
                 (%s, %s, %s)
-            RETURNING *
             ON CONFLICT 
                 (user_id, theme_id)
             DO NOTHING
+            RETURNING *
         """,
         (user_id, theme_id, grade),
     )
 
 
 def update_user(user_id: int, role_id: int):
-    sql(
+    return sql(
         f"""
             UPDATE 
                 users 
@@ -244,7 +272,7 @@ def get_user_langs(user_id: int):
 
 # TODO Привязывать к конкретному курсу
 def create_module(user_id: int, module_id: int):
-    sql(
+    return sql(
         f"""
             INSERT INTO 
                 courses_modules 
@@ -259,17 +287,18 @@ def create_module(user_id: int, module_id: int):
                 FROM
                     courses_users cu
                 WHERE
-                    s.user_id = %s
+                    cu.user_id = %s
             )
             ON CONFLICT (course_id, module_id)
             DO NOTHING
+            RETURNING *
         """,
         (module_id, user_id),
     )
 
 
 def get_grades(user_id: int):
-    sql(
+    return sql(
         f"""
             WITH gr AS (
                 SELECT 
@@ -293,10 +322,11 @@ def get_grades(user_id: int):
                 modules m
             JOIN
                 gr
-            ON gr.module_id = m.id
+            ON 
+                gr.module_id = m.id
             GROUP BY m.id 
         """,
-        (user_id),
+        (user_id,),
     )
 
 
@@ -311,11 +341,12 @@ def get_teacher_stat(teacher_id: int):
             		users u
             	JOIN
             		users_langs ul
-            	ON u.id = ul.user_id
+            	ON 
+                    u.id = ul.user_id
             	JOIN
             		courses_users cu
             	ON
-            		cm.user_id = u.id 
+            		cu.user_id = u.id 
             	WHERE u.id = %s
             ), modules_t AS (
             	SELECT 
@@ -326,11 +357,13 @@ def get_teacher_stat(teacher_id: int):
             		modules m
             	JOIN
             		courses_modules cm 
-            	ON m.id = cm.module_id
+            	ON
+                    m.id = cm.module_id
             	JOIN
             		cl
-            	ON cl.lang_id = m.lang_id 
-            	AND cl.course_id = cm.course_id 
+            	ON 
+                    cl.lang_id = m.lang_id 
+            	    AND cl.course_id = cm.course_id 
             	JOIN
             		(
             			SELECT
@@ -353,12 +386,13 @@ def get_teacher_stat(teacher_id: int):
             			ON u.id = g.user_id 
             			GROUP BY t.id
             		) AS ex_by_themes
-            	ON m.id = ex_by_themes.module_id
+            	ON 
+                    m.id = ex_by_themes.module_id
             	GROUP BY m.id
             )
             SELECT * FROM modules_t 
         """,
-        (teacher_id),
+        (teacher_id,),
     )
 
 
@@ -394,7 +428,7 @@ def create_answer(exersice_id: int, user_id: int, answer: str):
                 answers 
                 (exercise_id, user_id, answer) 
             VALUES 
-                (%s, %s, %s);
+                (%s, %s, %s)
             ON CONFLICT 
                 (exercise_id, user_id)
             DO UPDATE
@@ -419,7 +453,7 @@ def get_user_courses(user_id: int):
             WHERE
                 cu.user_id = %s
         """,
-        (user_id),
+        (user_id,),
     )
 
 
@@ -434,8 +468,27 @@ def set_user_course(user_id: int, course_id: int):
             ON CONFLICT 
                 (user_id, course_id)
             DO NOTHING
+            RETURNING *
         """,
         (user_id, course_id),
+    )
+
+
+def put_user_course(user_id: int, course_id: int):
+    return sql_one(
+        f"""
+            DELETE FROM courses_users WHERE user_id = %s;
+            INSERT INTO
+                courses_users
+                (user_id, course_id)
+            VALUES
+                (%s, %s)
+            ON CONFLICT 
+                (user_id, course_id)
+            DO NOTHING
+            RETURNING *
+        """,
+        (user_id, user_id, course_id),
     )
 
 

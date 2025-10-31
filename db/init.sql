@@ -128,6 +128,7 @@ CREATE INDEX users_chat_id_idx ON public.users USING btree (chat_id);
 CREATE TABLE public.users_langs (
 	user_id int8 NULL,
 	lang_id int8 NULL,
+	PRIMARY KEY (user_id, lang_id),
 	CONSTRAINT users_langs_langs_fk FOREIGN KEY (lang_id) REFERENCES public.langs(id)
 );
 
@@ -141,6 +142,7 @@ CREATE TABLE public.users_langs (
 CREATE TABLE public.courses_modules (
 	course_id int8 NULL,
 	module_id int8 NULL,
+	PRIMARY KEY (course_id, module_id),
 	CONSTRAINT courses_modules_courses_fk FOREIGN KEY (course_id) REFERENCES public.courses(id) ON DELETE CASCADE,
 	CONSTRAINT courses_modules_modules_fk FOREIGN KEY (module_id) REFERENCES public.modules(id) ON DELETE CASCADE
 );
@@ -155,6 +157,7 @@ CREATE TABLE public.courses_modules (
 CREATE TABLE public.courses_users (
 	course_id int8 NULL,
 	user_id int8 NULL,
+	PRIMARY KEY (course_id, user_id),
 	CONSTRAINT courses_users_courses_fk FOREIGN KEY (course_id) REFERENCES public.courses(id) ON DELETE CASCADE,
 	CONSTRAINT courses_users_users_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE
 );
@@ -185,11 +188,11 @@ CREATE TABLE public.exercise (
 -- DROP TABLE public.grades;
 
 CREATE TABLE public.grades (
-	id int8 GENERATED ALWAYS AS IDENTITY( INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START 1 CACHE 1 NO CYCLE) NOT NULL,
 	user_id int8 NULL,
 	theme_id int8 NULL,
 	grade int4 NULL,
-	CONSTRAINT grades_pk PRIMARY KEY (id),
+	PRIMARY KEY (user_id, theme_id),
+	CONSTRAINT grades_users_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE,
 	CONSTRAINT grades_themes_fk FOREIGN KEY (theme_id) REFERENCES public.themes(id) ON DELETE CASCADE
 );
 
@@ -204,7 +207,9 @@ CREATE TABLE public.answers (
 	user_id int8 NOT NULL,
 	exercise_id int8 NOT NULL,
 	answer varchar NULL,
-	CONSTRAINT answers_exercise_fk FOREIGN KEY (exercise_id) REFERENCES public.exercise(id)
+	PRIMARY KEY (user_id, exercise_id),
+	CONSTRAINT answers_users_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE,
+	CONSTRAINT answers_exercise_fk FOREIGN KEY (exercise_id) REFERENCES public.exercise(id) ON DELETE CASCADE
 );
 
 
@@ -227,9 +232,9 @@ INSERT INTO public.users ("name",last_name,login,password,chat_id,role_id) VALUE
 	Заполнение языков
 */
 INSERT INTO public.langs (name,short_name) VALUES
+	 ('Немецкий','🇩🇪'),
 	 ('Английский','🇬🇧'),
-	 ('Французский','🇨🇵'),
-	 ('Немецкий','🇩🇪');
+	 ('Французский','🇨🇵');
 	 
 INSERT INTO public.users_langs (user_id,lang_id) VALUES
 	 (1,2);

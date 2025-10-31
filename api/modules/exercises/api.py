@@ -11,9 +11,13 @@ def get_exercises(exercise_id: int):
 
 
 @exercises_bp.patch("/<int:exercise_id>")
-def get_exercises(exercise_id: int):
-    title = request.json.get("title")
-    data = request.json.get("data")
+def update_exercises(exercise_id: int):
+    title = request.json.pop("title") if "title" in request.json else None
+
+    data = None
+    if request.json:
+        data = request.json
+
     res = query.update_exersise(exercise_id, title, data)
     return jsonify(res)
 
@@ -23,6 +27,12 @@ def get_exercises_types():
     res = query.get_exercises_types()
     return jsonify(res)
 
-@exercises_bp.post("/media")
-def save_media():
+
+@exercises_bp.post("/media/audio")
+def save_audio():
+    return jsonify(request.json)
+
+
+@exercises_bp.get("/media/audio")
+def get_audio():
     return jsonify(request.json)

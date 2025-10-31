@@ -1,8 +1,6 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, abort
 from modules.users import query
-from flask_jwt_extended import get_jwt_identity, jwt_required, get_jwt
-from bcrypt import hashpw
-import os
+from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 
 users_bp = Blueprint("users", __name__, url_prefix="/users")
 
@@ -11,22 +9,6 @@ users_bp = Blueprint("users", __name__, url_prefix="/users")
 @users_bp.get("/")
 def get_users():
     res = query.get_users()
-    return jsonify(res)
-
-
-# /users/
-@users_bp.post("/")
-def save_user():
-    salt = os.environ.get("JWT_SECRET_KEY").encode()
-    user_info = {
-        "first_name": request.json.get("first_name"),
-        "last_name": request.json.get("last_name"),
-        "login": request.json.get("login"),
-        "password": hashpw(request.json.get("password").encode(), salt).decode(),
-        "chat_id": request.json.get("chat_id"),
-        "role_id": request.json.get("role_id", 1),
-    }
-    res = query.save_user(user_info)
     return jsonify(res)
 
 
@@ -66,12 +48,27 @@ def set_user_course(user_id: int):
     res = query.set_user_course(user_id, course_id)
     return jsonify(res)
 
+# /users/1/courses
+@users_bp.put("/<int:user_id>/courses")
+def put_user_course(user_id: int):
+    course_id = request.json.get("course_id")
+    res = query.put_user_course(user_id, course_id)
+    return jsonify(res)
+
 
 # /users/1/roles
 @users_bp.post("/<int:user_id>/roles")
+@jwt_required()
 def set_user_role(user_id: int):
-    role_id = request.json.get("course_id")
-    res = query.set_role(user_id, role_id)
+    id = int(get_jwt_identity()[0])
+    role = int(get_jwt()["user_role"])
+
+    role_id = request.json.get("role_id")
+    if role == 3:
+        res = query.set_role(user_id, role_id)
+    else:
+        res = query.set_role(id, role_id)
+
     return jsonify(res)
 
 
@@ -84,7 +81,7 @@ def get_user_modules(user_id: int):
 
 # /users/1/modules
 @users_bp.post("/<int:user_id>/modules")
-def create_user_modules(user_id: int, module_id: int):
+def create_user_modules(user_id: int):
     module_id = request.json.get("module_id")
     query.create_module(user_id, module_id)
     return jsonify({"success": True})
@@ -97,6 +94,13 @@ def create_user_lang(user_id: int):
     query.create_user_lang(user_id, lang_id)
     return jsonify({"success": True})
 
+# /users/1/langs
+@users_bp.put("/<int:user_id>/langs")
+def put_user_lang(user_id: int):
+    lang_id = request.json.get("lang_id")
+    query.put_user_lang(user_id, lang_id)
+    return jsonify({"success": True})
+
 
 # /users/1/langs
 @users_bp.get("/<int:user_id>/langs")
@@ -107,16 +111,21 @@ def get_user_lang(user_id: int):
 
 # /users/1/grades
 @users_bp.get("/<int:user_id>/grades")
+@jwt_required()
 def get_grades(user_id: int):
-    role = get_jwt()["user_role"]
-    res = None
+    id = int(get_jwt_identity()[0])
+    role = int(get_jwt()["user_role"])
 
-    is_teacher = role == 2
-
-    if is_teacher:
-        res = query.get_teacher_stat(user_id)
+    res = []
+    if role == 1:
+        res = query.get_grades(id)
+    elif role == 2:
+        res = query.get_teacher_stat(id)
     else:
-        res = query.get_grades(user_id)
+        if "by_teacher" in request.args:
+            res = query.get_teacher_stat(user_id)
+        else:
+            res = query.get_grades(user_id)
 
     return jsonify(res)
 

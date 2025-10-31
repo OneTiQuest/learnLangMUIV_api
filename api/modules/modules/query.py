@@ -1,7 +1,7 @@
 from app.database import sql, sql_one
 
 def update_module(module_id: int, name: str):
-    sql(
+    return sql_one(
         f"""
             UPDATE 
                 modules 
@@ -9,23 +9,25 @@ def update_module(module_id: int, name: str):
                 name = %s
             WHERE 
                 id = %s
+            RETURNING *
         """, 
         (name, module_id)
     )
-        
+
 def delete_module(module_id: int):
-    sql(
+    return sql(
         f"""
             DELETE FROM 
                 modules 
             WHERE 
-                id = %s;
+                id = %s
+            RETURNING *
         """,
-        (module_id,)
+        (module_id,),
     )
-        
+
 def create_module(name: str, lang_id: int):
-    sql(
+    return sql_one(
         f"""
             INSERT INTO 
                 modules
@@ -38,7 +40,7 @@ def create_module(name: str, lang_id: int):
                     %s,
                     %s
                 )
-            RETURNING *
+            RETURNING id
         """, 
         (name, lang_id)
     )
@@ -55,7 +57,7 @@ def get_themes_by_module_id(module_id: int):
             	module_id = %s
             ORDER BY t."order" ASC
         """,
-        (module_id)
+        (module_id,)
     )
 
 def create_theme(module_id: int, name: str):

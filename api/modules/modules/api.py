@@ -22,7 +22,7 @@ def update_module(module_id: int):
 @modules_bp.delete('/<int:module_id>')
 def delete_module(module_id: int):
     res = query.delete_module(module_id)
-    return jsonify({"success": True})
+    return jsonify(res)
 
 # /modules/1/themes
 @modules_bp.get('/<int:module_id>/themes')

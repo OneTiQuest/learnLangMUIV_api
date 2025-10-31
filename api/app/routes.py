@@ -8,6 +8,8 @@ from modules.courses.api import courses_bp
 from modules.modules.api import modules_bp
 from modules.langs.api import langs_bp
 from modules.themes.api import themes_bp
+from modules.roles.api import roles_bp
+from modules.exercises.api import exercises_bp
 
 
 def route(app: Flask):
@@ -24,6 +26,8 @@ def route(app: Flask):
     app.register_blueprint(modules_bp)
     app.register_blueprint(langs_bp)
     app.register_blueprint(themes_bp)
+    app.register_blueprint(roles_bp)
+    app.register_blueprint(exercises_bp)
 
     @app.errorhandler(Exception)
     def error(error):

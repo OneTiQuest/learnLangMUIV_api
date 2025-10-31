@@ -6,14 +6,23 @@ from flask_jwt_extended import (
     jwt_required,
     get_jwt,
 )
-from modules.users.query import get_auth_user, has_login
-from modules.users.api import save_user
-from bcrypt import hashpw
+from modules.users.query import get_auth_user, has_login, save_user, set_chat, get_user
+from bcrypt import hashpw, gensalt
 from datetime import timedelta, datetime, timezone
 from app.config import black_list_jwt
 import os
+from functools import wraps
 
+salt = gensalt()
 auth_bp = Blueprint("auth", __name__)
+
+
+def get_hashed_password(password: str):
+    if os.environ.get("DEBUG"):
+        return password
+
+    hashed_password = hashpw(password.encode(), salt).decode()
+    return hashed_password
 
 
 def send_tokens(identity: str):
@@ -43,21 +52,21 @@ def send_tokens(identity: str):
 def login():
     login = request.json.get("login")
     password: str = request.json.get("password")
+    chat_id: str = request.json.get("chat_id")
 
     if not login or not password:
         return abort(401)
 
-    salt = os.environ.get("JWT_SECRET_KEY").encode()
-    hashed_password = hashpw(password.encode(), salt).decode()
-    usr_pw = (
-        "admin" if login == "admin" else hashed_password
-    )  # TODO: В рамках тестового входа
-    user = get_auth_user(login, usr_pw)
+    user = get_auth_user(login, get_hashed_password(password))
 
     if not user:
         return abort(401)
+    
+    user_id = user[0]
+    if chat_id:
+        set_chat(user_id, chat_id)
 
-    identity = f"{user[0]}:{user[3]}:{user[4]}"
+    identity = f"{user_id}:{user[3]}:{user[4]}:{user[6]}"
 
     return send_tokens(identity)
 
@@ -70,9 +79,17 @@ def register():
     if has_login(request.json.get("login")):
         return abort(409)
 
-    new_user = save_user().json
+    user_info = {
+        "first_name": request.json.get("first_name"),
+        "last_name": request.json.get("last_name"),
+        "login": request.json.get("login"),
+        "password": get_hashed_password(request.json.get("password")),
+        "chat_id": request.json.get("chat_id"),
+        "role_id": request.json.get("role_id", 1),
+    }
+    new_user = save_user(user_info)
 
-    identity = f"{new_user[0]}:{new_user[3]}:{new_user[4]}"
+    identity = f"{new_user[0]}:{new_user[3]}:{new_user[4]}:{new_user[6]}"
 
     return send_tokens(identity)
 
@@ -86,7 +103,10 @@ def register():
 @jwt_required(refresh=True)
 def refresh():
     identity = get_jwt_identity()
-    return send_tokens(identity)
+    user_id = int(identity[0])
+    user = get_user(user_id)
+    new_identity = f"{user_id}:{user[3]}:{user[4]}:{user[6]}"
+    return send_tokens(new_identity)
 
 
 @auth_bp.delete("/loguot")
