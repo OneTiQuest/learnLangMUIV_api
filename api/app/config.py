@@ -1,6 +1,8 @@
 import configparser, os
+from bcrypt import hashpw, gensalt
 
 config = configparser.ConfigParser()
+salt = gensalt()
 
 def init_config():
     config.add_section('DB')
@@ -18,3 +20,11 @@ def init_config():
     config.set('API', 'DEBUG', os.environ.get("DEBUG"))
 
 black_list_jwt = {}
+
+
+def get_hashed_password(password: str):
+    if os.environ.get("DEBUG"):
+        return password
+
+    hashed_password = hashpw(password.encode(), salt).decode()
+    return hashed_password

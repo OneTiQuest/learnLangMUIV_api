@@ -1,6 +1,20 @@
 from app.database import sql, sql_one
 
 
+def get_theme(theme_id: int):
+    return sql_one(
+        f"""
+            SELECT
+                *
+            FROM
+                themes
+            WHERE
+                id = %s
+        """,
+        (theme_id,),
+    )
+
+
 def update_theme(theme_id: int, name: str):
     return sql_one(
         f"""
@@ -33,9 +47,14 @@ def get_exercises(theme_id: int):
     return sql(
         f"""
             SELECT 
-                *
+                e.*,
+                et.name
             FROM
                 exercise e 
+            JOIN
+                exercise_type et
+            ON
+                e.type_id = et.id
             WHERE
                 e.theme_id = %s
         """,

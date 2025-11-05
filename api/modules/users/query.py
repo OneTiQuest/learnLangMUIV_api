@@ -23,15 +23,40 @@ def get_user(id: int):
         f"""
             SELECT 
                 u.*,
-            	r.name AS role_name
+            	r.name AS role_name,
+                jsonb_agg(jsonb_strip_nulls(jsonb_build_object('id', l.id, 'name', l.name)))  FILTER (WHERE l.id IS NOT NULL) AS langs,
+               	jsonb_agg(jsonb_strip_nulls(jsonb_build_object('id', c.id, 'name', c.name)))  FILTER (WHERE c.id IS NOT NULL) AS courses
             FROM
                 users u
+
             JOIN
             	roles r 
             ON
             	r.id = u.role_id
+                
+            LEFT JOIN
+            	courses_users cu 
+            ON
+            	u.id = cu.user_id
+            LEFT JOIN
+            	courses c
+            ON
+            	c.id = cu.course_id
+                
+                
+            LEFT JOIN
+            	users_langs  ul
+            ON
+            	u.id = ul.user_id
+                
+            LEFT JOIN
+            	langs  l
+            ON
+            	l.id = ul.lang_id
+
             WHERE 
                 u.id = %s
+            GROUP BY (u.id, r.name)
             LIMIT 1
         """,
         (id,),
@@ -127,7 +152,7 @@ def set_chat(user_id: int, chat_id: int):
     )
 
 
-def create_user_lang(user_id: int, lang_id: int):
+def create_user_lang(user_id: int, langs_ids: int):
     return sql_one(
         f"""
             INSERT INTO 
@@ -137,17 +162,17 @@ def create_user_lang(user_id: int, lang_id: int):
                     lang_id
                 ) 
             VALUES 
-                (%s, %s)
+                (%s, UNNEST(%s))
             ON CONFLICT 
                 (user_id, lang_id)
             DO NOTHING
             RETURNING *
         """,
-        (user_id, lang_id),
+        (user_id, langs_ids),
     )
 
 
-def put_user_lang(user_id: int, lang_id: int):
+def put_user_lang(user_id: int, langs_ids: int):
     return sql_one(
         f"""
             DELETE FROM users_langs WHERE user_id = %s;
@@ -158,13 +183,13 @@ def put_user_lang(user_id: int, lang_id: int):
                     lang_id
                 ) 
             VALUES 
-                (%s, %s)
+                (%s, UNNEST(%s))
             ON CONFLICT 
                 (user_id, lang_id)
             DO NOTHING
             RETURNING *
         """,
-        (user_id, user_id, lang_id),
+        (user_id, user_id, langs_ids),
     )
 
 
@@ -178,72 +203,108 @@ def set_user_grade(user_id: int, theme_id: int, grade: int):
                 (%s, %s, %s)
             ON CONFLICT 
                 (user_id, theme_id)
-            DO NOTHING
+            DO UPDATE
+            SET grade = %s
             RETURNING *
         """,
-        (user_id, theme_id, grade),
+        (user_id, theme_id, grade, grade),
     )
 
 
-def update_user(user_id: int, role_id: int):
+def get_user_grade(user_id: int, theme_id: int):
+    return sql_one(
+        f"""
+            SELECT 
+                g.grade
+            FROM 
+                grades  g
+            WHERE 
+                g.user_id = %s
+                AND g.theme_id = %s
+        """,
+        (user_id, theme_id),
+    )
+
+
+def update_user(user_id: int, role_id: int, user_data):
+    params = {"role_id": role_id, "user_id": user_id}
+    params.update(user_data)
+
+    update_first_name = (
+        f", name = %(first_name)s" if user_data.get("first_name") else ""
+    )
+    update_last_name = (
+        f", last_name = %(last_name)s" if user_data.get("last_name") else ""
+    )
+    update_login = f", login = %(login)s" if user_data.get("login") else ""
+    update_password = f", password = %(password)s" if user_data.get("password") else ""
+    update_role = f", role_id = %(role_id)s" if user_data.get("role_id") else ""
+
     return sql(
         f"""
             UPDATE 
                 users 
             SET 
-                role_id = %s
+                role_id = %(role_id)s
+                {update_first_name}
+                {update_last_name}
+                {update_login}
+                {update_password}
+                {update_role}
             WHERE 
-                id = %s
+                id = %(user_id)s
+            RETURNING *
         """,
-        (role_id, user_id),
+        params,
     )
 
 
-def get_modules(user_id: int):
+def get_modules(user_id: int, is_full: bool = False):
+    full_query = ""
+    if not is_full:
+        full_query = f"""
+                JOIN
+                    modules_by_course mc
+                ON
+                    m.id = mc.module_id
+                JOIN
+                    modules_by_langs ml
+                ON
+                    m.lang_id = ml.lang_id 
+            """
+
     return sql(
         f"""
-            WITH lang_modules AS (
-            	SELECT
-            		m.id AS module_id,
-            		user_id
-            	FROM 
-            		users_langs ul
-            	JOIN
-            		modules m
-            	ON 
-            		m.lang_id = ul.lang_id
-            ), course_modules AS (
-            	SELECT
-            		module_id,
-            		user_id AS cui
-            	FROM 
-            		courses_modules cm
-            	JOIN
-            		courses_users cu
-            	ON 
-            		cm.course_id = cu.course_id::int
-            ), m_ids AS (
-            	SELECT 
-            		*
-            	FROM
-            		lang_modules lm
-            	FULL JOIN
-            		course_modules cm
-            	USING(module_id)
+            WITH modules_by_course AS (
+                SELECT
+                    cm.module_id 
+                FROM
+                    courses_users cu 
+                JOIN
+                    courses_modules cm
+                ON
+                    cm.course_id = cu.course_id 
+                WHERE
+                    cu.user_id = %s
+            ), modules_by_langs AS (
+                SELECT
+                    ul.lang_id
+                FROM
+                    users_langs ul 
+                WHERE
+                    ul.user_id = %s
             )
-            SELECT
-            	id,
-            	name
-            FROM 
-            	m_ids
+            SELECT DISTINCT
+                m.id,
+                m.name,
+                l.name
+            FROM
+                modules m
             JOIN
-            	modules m
+                langs l
             ON
-            	m_ids.module_id = m.id
-            WHERE 
-            	m_ids.user_id = %s
-            	AND 
-            	m_ids.cui = %s
+                l.id = m.lang_id
+            {full_query}
             ORDER BY id ASC
         """,
         (user_id, user_id),
@@ -457,24 +518,24 @@ def get_user_courses(user_id: int):
     )
 
 
-def set_user_course(user_id: int, course_id: int):
+def set_user_course(user_id: int, courses_ids: list[int]):
     return sql(
         f"""
             INSERT INTO
                 courses_users
                 (user_id, course_id)
             VALUES
-                (%s, %s)
+                (%s, UNNEST(%s))
             ON CONFLICT 
                 (user_id, course_id)
             DO NOTHING
             RETURNING *
         """,
-        (user_id, course_id),
+        (user_id, courses_ids),
     )
 
 
-def put_user_course(user_id: int, course_id: int):
+def put_user_course(user_id: int, courses_ids: int):
     return sql_one(
         f"""
             DELETE FROM courses_users WHERE user_id = %s;
@@ -482,13 +543,13 @@ def put_user_course(user_id: int, course_id: int):
                 courses_users
                 (user_id, course_id)
             VALUES
-                (%s, %s)
+                (%s, UNNEST(%s))
             ON CONFLICT 
                 (user_id, course_id)
             DO NOTHING
             RETURNING *
         """,
-        (user_id, user_id, course_id),
+        (user_id, user_id, courses_ids),
     )
 
 

@@ -7,22 +7,11 @@ from flask_jwt_extended import (
     get_jwt,
 )
 from modules.users.query import get_auth_user, has_login, save_user, set_chat, get_user
-from bcrypt import hashpw, gensalt
 from datetime import timedelta, datetime, timezone
-from app.config import black_list_jwt
-import os
-from functools import wraps
+from app.config import black_list_jwt, get_hashed_password
 
-salt = gensalt()
+
 auth_bp = Blueprint("auth", __name__)
-
-
-def get_hashed_password(password: str):
-    if os.environ.get("DEBUG"):
-        return password
-
-    hashed_password = hashpw(password.encode(), salt).decode()
-    return hashed_password
 
 
 def send_tokens(identity: str):

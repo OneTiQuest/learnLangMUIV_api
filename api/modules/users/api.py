@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request, abort
 from modules.users import query
+from app.config import get_hashed_password
 from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 
 users_bp = Blueprint("users", __name__, url_prefix="/users")
@@ -10,6 +11,27 @@ users_bp = Blueprint("users", __name__, url_prefix="/users")
 def get_users():
     res = query.get_users()
     return jsonify(res)
+
+
+# /users/
+@users_bp.post("/")
+def create_user():
+    if not request.json.get("login") or not request.json.get("password"):
+        return abort(400)
+
+    if query.has_login(request.json.get("login")):
+        return abort(409)
+
+    user_info = {
+        "first_name": request.json.get("first_name"),
+        "last_name": request.json.get("last_name"),
+        "login": request.json.get("login"),
+        "password": get_hashed_password(request.json.get("password")),
+        "chat_id": request.json.get("chat_id"),
+        "role_id": request.json.get("role_id", 1),
+    }
+    new_user = query.save_user(user_info)
+    return jsonify(new_user)
 
 
 # /users/1
@@ -30,8 +52,15 @@ def get_profile():
 # /users/1
 @users_bp.patch("/<int:user_id>")
 def update_user(user_id: int):
-    query.update_user(user_id, request.json.get("role_id"))
-    return jsonify({"success": True})
+    user_info = {
+        "first_name": request.json.get("first_name"),
+        "last_name": request.json.get("last_name"),
+        "login": request.json.get("login"),
+        "password": get_hashed_password(request.json.get("password")),
+        "chat_id": request.json.get("chat_id")
+    }
+    res = query.update_user(user_id, request.json.get("role_id"), user_info)
+    return jsonify(res)
 
 
 # /users/1/courses
@@ -44,15 +73,16 @@ def get_user_courses(user_id: int):
 # /users/1/courses
 @users_bp.post("/<int:user_id>/courses")
 def set_user_course(user_id: int):
-    course_id = request.json.get("course_id")
-    res = query.set_user_course(user_id, course_id)
+    courses = request.json.get("courses")
+    res = query.set_user_course(user_id, courses)
     return jsonify(res)
+
 
 # /users/1/courses
 @users_bp.put("/<int:user_id>/courses")
 def put_user_course(user_id: int):
-    course_id = request.json.get("course_id")
-    res = query.put_user_course(user_id, course_id)
+    courses = request.json.get("courses")
+    res = query.put_user_course(user_id, courses)
     return jsonify(res)
 
 
@@ -74,8 +104,10 @@ def set_user_role(user_id: int):
 
 # /users/1/modules
 @users_bp.get("/<int:user_id>/modules")
+@jwt_required()
 def get_user_modules(user_id: int):
-    res = query.get_modules(user_id)
+    role = int(get_jwt()["user_role"])
+    res = query.get_modules(user_id, role == 3)
     return jsonify(res)
 
 
@@ -90,15 +122,16 @@ def create_user_modules(user_id: int):
 # /users/1/langs
 @users_bp.post("/<int:user_id>/langs")
 def create_user_lang(user_id: int):
-    lang_id = request.json.get("lang_id")
-    query.create_user_lang(user_id, lang_id)
+    langs = request.json.get("langs")
+    query.create_user_lang(user_id, langs)
     return jsonify({"success": True})
+
 
 # /users/1/langs
 @users_bp.put("/<int:user_id>/langs")
 def put_user_lang(user_id: int):
-    lang_id = request.json.get("lang_id")
-    query.put_user_lang(user_id, lang_id)
+    langs = request.json.get("langs")
+    query.put_user_lang(user_id, langs)
     return jsonify({"success": True})
 
 
@@ -135,6 +168,13 @@ def get_grades(user_id: int):
 def set_grade(user_id: int, theme_id: int):
     grade = request.json.get("grade")
     res = query.set_user_grade(user_id, theme_id, grade)
+    return jsonify(res)
+
+
+# /users/1/themes/1/grades
+@users_bp.get("/<int:user_id>/themes/<int:theme_id>/grades")
+def get_grade(user_id: int, theme_id: int):
+    res = query.get_user_grade(user_id, theme_id)
     return jsonify(res)
 
 
