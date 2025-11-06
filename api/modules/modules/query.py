@@ -130,7 +130,7 @@ def get_themes_by_module_id(module_id: int):
 
 
 def create_theme(module_id: int, name: str):
-    sql(
+    return sql_one(
         f"""
             INSERT INTO 
                 themes

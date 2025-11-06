@@ -15,18 +15,20 @@ def get_theme(theme_id: int):
     )
 
 
-def update_theme(theme_id: int, name: str):
+def update_theme(theme_id: int, name: str, module_id: int):
+    update_module = f", module_id = %s" if module_id else ""
     return sql_one(
         f"""
             UPDATE 
                 themes
             SET 
                 name = %s
+                {update_module}
             WHERE 
                 id = %s
             RETURNING *
         """,
-        (name, theme_id),
+        (name, theme_id, module_id),
     )
 
 

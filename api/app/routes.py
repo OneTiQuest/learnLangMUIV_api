@@ -10,6 +10,7 @@ from modules.langs.api import langs_bp
 from modules.themes.api import themes_bp
 from modules.roles.api import roles_bp
 from modules.exercises.api import exercises_bp
+from modules.files.api import files_bp
 
 
 def route(app: Flask):
@@ -28,6 +29,7 @@ def route(app: Flask):
     app.register_blueprint(themes_bp)
     app.register_blueprint(roles_bp)
     app.register_blueprint(exercises_bp)
+    app.register_blueprint(files_bp)
 
     @app.errorhandler(Exception)
     def error(error):

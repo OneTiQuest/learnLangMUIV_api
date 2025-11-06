@@ -27,8 +27,22 @@ def get_exersise(id: int):
     )
 
 
-def update_exersise(id: int, title: str = None, data: dict = None):
+def delete_exersise(id: int):
+    return sql_one(
+        f"""
+            DELETE FROM 
+                exercise 
+            WHERE 
+                id = %s
+            RETURNING *
+        """,
+        (id,),
+    )
+
+
+def update_exersise(id: int, title: str = None, data: dict = None, type_id: int = None):
     change_title_query = f"title = '{title}'" if title else ""
+    change_type_id = f",type_id = '{type_id}'" if type_id else ""
 
     change_data_query = ""
     if data:
@@ -36,8 +50,8 @@ def update_exersise(id: int, title: str = None, data: dict = None):
         change_data_query = f"another_data = jsonb_set(COALESCE(another_data, '{{}}')::jsonb, '{{{key}}}', '{json.dumps(value)}'::jsonb)"
 
     if change_title_query and change_data_query:
-        change_title_query += ','
-        
+        change_title_query += ","
+
     return sql_one(
         f"""
             UPDATE 
@@ -45,6 +59,7 @@ def update_exersise(id: int, title: str = None, data: dict = None):
             SET 
                 {change_title_query}
                 {change_data_query}
+                {change_type_id}
             WHERE id = %s
             RETURNING *
         """,

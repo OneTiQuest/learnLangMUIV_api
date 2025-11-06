@@ -13,8 +13,9 @@ def get_theme(theme_id: int):
 @themes_bp.patch("/<int:theme_id>")
 def update_theme(theme_id: int):
     name = request.json.get("name")
-    query.update_theme(theme_id, name)
-    return jsonify({"success": True})
+    module_id = request.json.get("module_id")
+    res = query.update_theme(theme_id, name, module_id)
+    return jsonify(res)
 
 
 @themes_bp.delete("/<int:theme_id>")
