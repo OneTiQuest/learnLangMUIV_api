@@ -41,6 +41,13 @@ def get_user(user_id: int):
     return jsonify(res)
 
 
+# /users/1
+@users_bp.delete("/<int:user_id>")
+def delete_user(user_id: int):
+    res = query.delete_user(user_id)
+    return jsonify(res)
+
+
 # /users/profile
 @users_bp.get("/profile")
 @jwt_required()
@@ -57,7 +64,7 @@ def update_user(user_id: int):
         "last_name": request.json.get("last_name"),
         "login": request.json.get("login"),
         "password": get_hashed_password(request.json.get("password")),
-        "chat_id": request.json.get("chat_id")
+        "chat_id": request.json.get("chat_id"),
     }
     res = query.update_user(user_id, request.json.get("role_id"), user_info)
     return jsonify(res)

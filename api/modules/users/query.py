@@ -122,6 +122,19 @@ def save_user(user_info: dict):
     )
 
 
+def delete_user(user_id: int):
+    return sql_one(
+        f"""
+            DELETE FROM
+                users
+            WHERE
+                id = %s
+            RETURNING *
+        """,
+        (user_id,),
+    )
+
+
 def set_role(user_id: int, role_id: int):
     return sql(
         f"""
