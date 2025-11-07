@@ -129,7 +129,7 @@ CREATE TABLE public.users_langs (
 	user_id int8 NULL,
 	lang_id int8 NULL,
 	PRIMARY KEY (user_id, lang_id),
-	CONSTRAINT users_langs_langs_fk FOREIGN KEY (lang_id) REFERENCES public.langs(id)
+	CONSTRAINT users_langs_langs_fk FOREIGN KEY (lang_id) REFERENCES public.langs(id) ON DELETE CASCADE
 );
 
 
