@@ -24,8 +24,8 @@ def get_user(id: int):
             SELECT 
                 u.*,
             	r.name AS role_name,
-                jsonb_agg(jsonb_strip_nulls(jsonb_build_object('id', l.id, 'name', l.name)))  FILTER (WHERE l.id IS NOT NULL) AS langs,
-               	jsonb_agg(jsonb_strip_nulls(jsonb_build_object('id', c.id, 'name', c.name)))  FILTER (WHERE c.id IS NOT NULL) AS courses
+                jsonb_agg(DISTINCT jsonb_strip_nulls(jsonb_build_object('id', l.id, 'name', l.name)))  FILTER (WHERE l.id IS NOT NULL) AS langs,
+               	jsonb_agg(DISTINCT jsonb_strip_nulls(jsonb_build_object('id', c.id, 'name', c.name)))  FILTER (WHERE c.id IS NOT NULL) AS courses
             FROM
                 users u
 
