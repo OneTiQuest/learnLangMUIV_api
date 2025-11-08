@@ -8,7 +8,7 @@ RUN python -m venv .venv
 RUN chmod +x .venv/bin/activate
 RUN .venv/bin/activate
 
-RUN python -m pip install --upgrade pip
+RUN python -m pip install --default-timeout=100 --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 8000

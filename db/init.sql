@@ -19,7 +19,7 @@ CREATE TABLE public.courses (
 -- DROP TABLE public.exercise_type;
 
 CREATE TABLE public.exercise_type (
-	id int8 GENERATED ALWAYS AS IDENTITY( INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START 1 CACHE 1 NO CYCLE) NOT NULL,
+	id int8 NOT NULL,
 	"name" varchar NULL,
 	CONSTRAINT exercise_type_pk PRIMARY KEY (id)
 );
@@ -337,11 +337,12 @@ INSERT INTO public.grades (user_id,theme_id,grade) VALUES
 /*
 	Заполнение упражнений
 */
-INSERT INTO public.exercise_type (name) VALUES
-	 ('Недостающее слово'),
-	 ('Правильный вариант'),
-	 ('Аудио'),
-	 ('Теория');
+INSERT INTO public.exercise_type (id, name) VALUES
+	 (1, 'Недостающее слово'),
+	 (2, 'Правильный вариант'),
+	 (3, 'Аудио'),
+	 (4, 'Теория'),
+	 (5, 'Картинка');
 	 
 INSERT INTO public.exercise (title,"order",another_data,theme_id,type_id) VALUES
 	 ('I ______ to the gym every Monday and Wednesday.',0,'{"answers": ["go", "am going", "goes", "have gone"], "success_answer": "am going"}',2,2),
